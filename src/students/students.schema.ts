@@ -1,49 +1,41 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
-import { Document } from 'mongoose'
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
 
-export type StudentDocument = Student & Document
+export type StudentDocument = Student & Document;
+
+export interface AttendanceRecord {
+  day: string; // YYYY-MM-DD (WAJIB untuk filter hari)
+  date: Date;  // timestamp scan
+  status: string; // Hadir, Izin, Sakit, Alfa
+  method: string; // qr, manual, system
+}
+
 
 @Schema({ timestamps: true })
 export class Student {
   @Prop({ required: true, unique: true })
-  nis: string
+  nis: string;
 
   @Prop({ required: true })
-  name: string
+  name: string;
 
   @Prop({ required: true })
-  class: string
+  class: string;
 
   @Prop({ required: true, unique: true })
-  email: string
+  email: string;
 
   @Prop({ required: true })
-  password: string
-
-  @Prop({ default: 'student' })
-  role: string
+  password: string;
 
   @Prop({ default: '' })
-  status: string
+  status: string; // status terakhir hari ini
+
+  @Prop({ type: [Object], default: [] })
+  attendanceHistory: AttendanceRecord[];
 
   @Prop({ default: '' })
-  photo: string  // 🔥 TAMBAHAN UNTUK FOTO
-
-  @Prop({
-    type: [
-      {
-        date: Date,
-        status: String,
-        method: String,
-      },
-    ],
-    default: [],
-  })
-  attendanceHistory: {
-    date: Date
-    status: string
-    method: string
-  }[]
+  photo: string;
 }
 
-export const StudentSchema = SchemaFactory.createForClass(Student)
+export const StudentSchema = SchemaFactory.createForClass(Student);

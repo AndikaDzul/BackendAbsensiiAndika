@@ -1,37 +1,24 @@
-// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 
-// ===== MODULES APLIKASI =====
+// Modules
 import { StudentsModule } from './students/students.module';
 import { TeachersModule } from './teachers/teachers.module';
-import { AuthModule } from './auth/auth.module';
 import { AdminsModule } from './admins/admins.module';
-import { FaceModule } from './face/face.module';
-import { AttendanceModule } from './attendance/attendance.module'; // ✅ TAMBAHAN
+import { AttendanceModule } from './attendance/attendance.module';
+import { SchedulesModule } from './schedules/schedules.module';
 
 @Module({
   imports: [
-    // membaca file .env secara global
     ConfigModule.forRoot({ isGlobal: true }),
+    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/absensi'),
 
-    // koneksi ke MongoDB secara async
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGO_URI'),
-      }),
-    }),
-
-    // modules aplikasi
     StudentsModule,
     TeachersModule,
-    AuthModule,
     AdminsModule,
-    FaceModule,
-    AttendanceModule, // ✅ TAMBAH DI AKHIR
+    AttendanceModule,
+    SchedulesModule,
   ],
 })
 export class AppModule {}

@@ -1,45 +1,54 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Param,
-  Body,
-} from '@nestjs/common';
-import { StudentsService } from './students.service';
-import { UpdateStatusDto } from './dto/update-status.dto';
-import { Student } from './students.schema';
+import { Controller, Get, Post, Patch, Body, Param, BadRequestException } from '@nestjs/common'
+import { StudentsService } from './students.service'
 
 @Controller('students')
 export class StudentsController {
-  constructor(private readonly studentsService: StudentsService) {}
+  constructor(private readonly service: StudentsService) {}
 
   @Get()
-  findAll(): Promise<Student[]> {
-    return this.studentsService.findAll();
+  findAll() {
+    return this.service.findAll()
   }
 
   @Post()
-  create(@Body() body: Partial<Student>) {
-    return this.studentsService.create(body);
+  create(@Body() body) {
+    return this.service.create(body)
+  }
+
+  @Post('login')
+  login(@Body() body) {
+    if (!body.email || !body.password)
+      throw new BadRequestException('Email & password wajib')
+    return this.service.login(body.email, body.password)
   }
 
   @Patch('attendance/:nis')
-  updateAttendance(
-    @Param('nis') nis: string,
-    @Body() body: UpdateStatusDto,
-  ) {
-    return this.studentsService.updateStatus(nis, body.status);
+  update(@Param('nis') nis: string, @Body() body) {
+    return this.service.updateStatus(nis, body.status, body.method)
+  }
+
+  @Post('scan')
+  scan(@Body() body) {
+    return this.service.updateStatus(body.nis, body.status || 'Hadir', 'qr')
+  }
+
+  @Get('history/:nis')
+  history(@Param('nis') nis: string) {
+    return this.service.getAttendance(nis)
   }
 
   @Patch('reset/:nis')
-  resetAttendance(@Param('nis') nis: string) {
-    return this.studentsService.resetStatus(nis);
+  resetOne(@Param('nis') nis: string) {
+    return this.service.resetTodayAttendance(nis)
   }
 
-  @Delete(':nis')
-  delete(@Param('nis') nis: string) {
-    return this.studentsService.deleteByNis(nis);
+  @Patch('reset-all')
+  async resetAll() {
+    return this.service.resetAllAttendance()
+  }
+
+  @Get('report/:day')
+  async report(@Param('day') day: string) {
+    return this.service.getDailyReport(day)
   }
 }

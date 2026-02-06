@@ -1,21 +1,57 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Attendance, AttendanceDocument } from './schemas/attendance.schema';
+import { Injectable, BadRequestException } from '@nestjs/common'
+import { InjectModel } from '@nestjs/mongoose'
+import { Model } from 'mongoose'
+import { Attendance, AttendanceDocument } from './schemas/attendance.schema'
 
 @Injectable()
 export class AttendanceService {
-  constructor(@InjectModel(Attendance.name) private attendanceModel: Model<AttendanceDocument>) {}
+  constructor(
+    @InjectModel(Attendance.name)
+    private attendanceModel: Model<AttendanceDocument>,
+  ) {}
 
-  create(attendance: Partial<Attendance>) {
-    return new this.attendanceModel(attendance).save();
+  async scan(data: {
+    nis: string
+    name?: string
+    status?: string
+    time?: string
+  }): Promise<Attendance> {
+    if (!data.nis) {
+      throw new BadRequestException('NIS wajib')
+    }
+
+    // ⬇️ JIKA time dikirim → pakai
+    // ⬇️ JIKA tidak → pakai waktu sekarang
+    const date = data.time ? new Date(data.time) : new Date()
+
+    if (isNaN(date.getTime())) {
+      throw new BadRequestException('Format waktu tidak valid')
+    }
+
+    // 🔥 HARI OTOMATIS SESUAI TANGGAL
+    const day = date.toLocaleDateString('id-ID', {
+      weekday: 'long',
+    })
+
+    return this.attendanceModel.create({
+      nis: data.nis,
+      name: data.name || '',
+      status: data.status || 'Hadir',
+      time: date,
+      day,
+    })
   }
 
-  getHistory() {
-    return this.attendanceModel.find().sort({ createdAt: -1 }).limit(100);
+  async findAll(): Promise<Attendance[]> {
+    return this.attendanceModel.find().sort({ time: -1 })
   }
 
-  resetAll() {
-    return this.attendanceModel.deleteMany({});
+  async reportByDay(day: string): Promise<Attendance[]> {
+    return this.attendanceModel.find({ day }).sort({ time: 1 })
+  }
+
+  async resetAll(): Promise<{ success: boolean }> {
+    await this.attendanceModel.deleteMany({})
+    return { success: true }
   }
 }

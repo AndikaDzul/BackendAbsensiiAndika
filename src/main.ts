@@ -1,29 +1,58 @@
-import { NestFactory } from '@nestjs/core'
-import { AppModule } from './app.module'
-import { ValidationPipe } from '@nestjs/common'
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
+import * as os from 'os';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  try {
+    const app = await NestFactory.create(AppModule);
 
-  // 🔥 TAMBAHAN PENTING
-  app.setGlobalPrefix('api') // semua route diawali /api
+    // Prefix API
+    app.setGlobalPrefix('api');
 
-  app.enableCors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
+    // CORS
+    app.enableCors({
+      origin: '*',
+      methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // hanya property DTO yang diterima
-      transform: true, // otomatis convert types
-    }),
-  )
+    // Global Validation Pipe
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+      }),
+    );
 
-  await app.listen(3000)
-  console.log('🚀 Backend running http://localhost:3000')
-  console.log('👉 API Prefix: /api')
+    // Port
+    const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+    // Listen di semua interface agar bisa diakses dari LAN
+    await app.listen(port, '0.0.0.0');
+
+    // Tampilkan IP LAN
+    const interfaces = os.networkInterfaces();
+    let localIp = 'localhost';
+
+    for (const name of Object.keys(interfaces)) {
+      for (const net of interfaces[name] || []) {
+        if (net.family === 'IPv4' && !net.internal) {
+          localIp = net.address;
+          break;
+        }
+      }
+    }
+
+    console.log(`🚀 Backend running:`);
+    console.log(`👉 Local   : http://localhost:${port}/api`);
+    console.log(`👉 Network : http://${localIp}:${port}/api`);
+
+  } catch (err) {
+    console.error('❌ Error starting server:', err);
+    process.exit(1);
+  }
 }
 
-bootstrap()
+bootstrap();

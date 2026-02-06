@@ -8,5 +8,6 @@ import { Schedule, ScheduleSchema } from './schedule.schema';
   imports: [MongooseModule.forFeature([{ name: Schedule.name, schema: ScheduleSchema }])],
   controllers: [SchedulesController],
   providers: [SchedulesService],
+  exports: [SchedulesService],
 })
 export class SchedulesModule {}

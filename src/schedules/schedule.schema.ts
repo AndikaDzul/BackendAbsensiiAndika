@@ -16,6 +16,9 @@ export class Schedule extends Document {
 
   @Prop({ required: true })
   jam: string;
+
+  @Prop({ required: true })
+  kelas: string;
 }
 
 export const ScheduleSchema = SchemaFactory.createForClass(Schedule);

@@ -1,22 +1,40 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
-import { AttendanceService } from './attendance.service';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common'
+import { AttendanceService } from './attendance.service'
+import { Attendance } from './schemas/attendance.schema'
 
 @Controller('attendance')
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
+  // 📷 SCAN QR
   @Post('scan')
-  async scan(@Body() body: { nis: string; name: string; status: string; time: string }) {
-    return this.attendanceService.create(body);
+  async scan(
+    @Body()
+    body: {
+      nis: string
+      name?: string
+      status?: string
+      time?: string
+    },
+  ): Promise<Attendance> {
+    return this.attendanceService.scan(body)
   }
 
-  @Get('history')
-  getHistory() {
-    return this.attendanceService.getHistory();
+  // 📜 SEMUA DATA
+  @Get()
+  async findAll(): Promise<Attendance[]> {
+    return this.attendanceService.findAll()
   }
 
+  // 📊 LAPORAN PER HARI
+  @Get('report/:day')
+  async report(@Param('day') day: string): Promise<Attendance[]> {
+    return this.attendanceService.reportByDay(day)
+  }
+
+  // ♻️ RESET
   @Post('reset')
-  reset() {
-    return this.attendanceService.resetAll();
+  async reset(): Promise<{ success: boolean }> {
+    return this.attendanceService.resetAll()
   }
 }
