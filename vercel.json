@@ -16,11 +16,5 @@
         "Access-Control-Allow-Headers": "Content-Type, Authorization"
       }
     }
-  ],
-  "crons": [
-    {
-      "path": "/students",
-      "schedule": "*/5 * * * *"
-    }
   ]
 }
