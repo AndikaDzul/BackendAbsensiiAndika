@@ -1,148 +1,101 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common'
-import { InjectModel } from '@nestjs/mongoose'
-import { Model } from 'mongoose'
-import { Student, StudentDocument } from './students.schema'
-import * as bcrypt from 'bcryptjs'
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import * as bcrypt from 'bcrypt';
+import { Student, StudentDocument } from './students.schema';
+
+export interface AttendanceReport {
+  nis: string;
+  name: string;
+  class: string;
+  status: string;
+  mapel?: string;
+  guru?: string;
+  jam?: string;
+}
 
 @Injectable()
 export class StudentsService {
-  constructor(
-    @InjectModel(Student.name)
-    private model: Model<StudentDocument>,
-  ) {}
+  constructor(@InjectModel(Student.name) private studentModel: Model<StudentDocument>) {}
 
-  async create(data: Partial<Student>) {
-    if (!data.password) throw new BadRequestException('Password wajib')
-    data.password = await bcrypt.hash(data.password, 10)
-    return this.model.create(data)
+  async findAll(): Promise<StudentDocument[]> {
+    return this.studentModel.find().exec();
   }
 
-  async login(email: string, password: string) {
-    const student = await this.model.findOne({ email })
-    if (!student) throw new BadRequestException('Email tidak ditemukan')
-
-    const ok = await bcrypt.compare(password, student.password)
-    if (!ok) throw new BadRequestException('Password salah')
-
-    return student
+  async findOne(nis: string): Promise<StudentDocument> {
+    const student = await this.studentModel.findOne({ nis }).exec();
+    if (!student) throw new NotFoundException('Siswa tidak ditemukan');
+    return student;
   }
 
-  async findAll() {
-    return this.model.find().sort({ name: 1 })
+  async create(data: { nis: string; name: string; class: string; email: string; password: string }) {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const student = new this.studentModel({ ...data, password: hashedPassword });
+    return student.save();
   }
 
-  // =========================
-  // ABSENSI (AMAN & KONSISTEN)
-  // =========================
-  async updateStatus(nis: string, status: string, method = 'manual') {
-    const student = await this.model.findOne({ nis })
-    if (!student) throw new NotFoundException('Siswa tidak ditemukan')
+  async remove(nis: string) {
+    return this.studentModel.findOneAndDelete({ nis }).exec();
+  }
 
-    const now = new Date()
-    const today = now.toISOString().slice(0, 10) // YYYY-MM-DD
+  async login(email: string, password: string): Promise<StudentDocument> {
+    const student = await this.studentModel.findOne({ email });
+    if (!student) throw new NotFoundException('Email tidak ditemukan');
+    const match = await bcrypt.compare(password, student.password);
+    if (!match) throw new Error('Password salah');
+    return student;
+  }
 
-    let record = student.attendanceHistory.find(r => r.day === today)
-
-    if (record) {
-      record.status = status
-      record.method = method
-      record.date = now
-    } else {
-      student.attendanceHistory.push({
-        day: today,
-        date: now,
-        status,
-        method,
-      })
+  async markAttendance(
+    nis: string,
+    attendance: {
+      day: string;
+      date: Date;
+      status: string;
+      method: string;
+      timestamp: Date;
+      teacherToken?: string;
+      mapel?: string;
+      guru?: string;
+      jam?: string;
     }
-
-    student.status = status
-    await student.save()
-    return student
+  ): Promise<StudentDocument> {
+    const student = await this.findOne(nis);
+    student.status = 'Hadir';
+    student.attendanceHistory.push(attendance);
+    return student.save();
   }
 
-  // =========================
-  // RESET ABSEN HARI INI
-  // =========================
-  async resetTodayAttendance(nis: string) {
-    const student = await this.model.findOne({ nis })
-    if (!student) throw new NotFoundException('Siswa tidak ditemukan')
-
-    const today = new Date().toISOString().slice(0, 10)
-
-    student.attendanceHistory = student.attendanceHistory.filter(
-      r => r.day !== today,
-    )
-
-    student.status = ''
-    await student.save()
-
-    return { message: 'Absensi hari ini berhasil dihapus' }
+  async resetAllAttendance(): Promise<void> {
+    const students = await this.findAll();
+    for (const s of students) {
+      s.status = '-';
+      s.attendanceHistory = [];
+      await s.save();
+    }
   }
 
-  async resetAllAttendance() {
-    const today = new Date().toISOString().slice(0, 10)
-    const students = await this.model.find()
-
-    await Promise.all(
-      students.map(async s => {
-        s.attendanceHistory = s.attendanceHistory.filter(
-          r => r.day !== today,
-        )
-        s.status = ''
-        await s.save()
-      }),
-    )
-
-    return { message: 'Semua absensi hari ini berhasil dihapus' }
-  }
-
-  // =========================
-  // HISTORY (URUT TERBARU)
-  // =========================
-  async getAttendance(nis: string) {
-    const student = await this.model.findOne({ nis })
-    if (!student) throw new NotFoundException('Siswa tidak ditemukan')
-
-    return student.attendanceHistory
-      .filter(r => r.date)
-      .sort((a, b) => +new Date(b.date) - +new Date(a.date))
-      .map(r => ({
-        ...r,
-        createdAt: r.date,
-        dayName: new Date(r.date).toLocaleDateString('id-ID', {
-          weekday: 'long',
-        }),
-      }))
-  }
-
-  // =========================
-  // LAPORAN HARIAN
-  // =========================
-  async getDailyReport(day: string) {
-    const students = await this.model.find()
-
-    return students.map(s => {
-      const record = s.attendanceHistory.find(r => {
-        if (!r.date) return false
-        const hari = new Date(r.date).toLocaleDateString('id-ID', {
-          weekday: 'long',
-        })
-        return hari.toLowerCase() === day.toLowerCase()
-      })
-
-      return {
-        nis: s.nis,
-        name: s.name,
-        class: s.class,
-        status: record?.status || '-',
-        mapel: '-',
-        guru: '-',
+  async getDailyReport(day: string): Promise<AttendanceReport[]> {
+    const students = await this.findAll();
+    const report: AttendanceReport[] = [];
+    for (const s of students) {
+      const a = s.attendanceHistory.filter(at => at.day === day);
+      if (a.length === 0) {
+        report.push({ nis: s.nis, name: s.name, class: s.class, status: '-' });
+      } else {
+        for (const sc of a) {
+          report.push({
+            nis: s.nis,
+            name: s.name,
+            class: s.class,
+            status: sc.status,
+            mapel: sc.mapel || '',
+            guru: sc.guru || '',
+            jam: sc.jam || ''
+          });
+        }
       }
-    })
+    }
+    return report;
   }
 }

@@ -3,15 +3,7 @@ import { Document } from 'mongoose';
 
 export type StudentDocument = Student & Document;
 
-export interface AttendanceRecord {
-  day: string; // YYYY-MM-DD (WAJIB untuk filter hari)
-  date: Date;  // timestamp scan
-  status: string; // Hadir, Izin, Sakit, Alfa
-  method: string; // qr, manual, system
-}
-
-
-@Schema({ timestamps: true })
+@Schema({ timestamps: true }) // createdAt & updatedAt otomatis
 export class Student {
   @Prop({ required: true, unique: true })
   nis: string;
@@ -28,14 +20,21 @@ export class Student {
   @Prop({ required: true })
   password: string;
 
-  @Prop({ default: '' })
-  status: string; // status terakhir hari ini
+  @Prop({ default: '-' })
+  status: string;
 
-  @Prop({ type: [Object], default: [] })
-  attendanceHistory: AttendanceRecord[];
-
-  @Prop({ default: '' })
-  photo: string;
+  @Prop({ type: Array, default: [] })
+  attendanceHistory: Array<{
+    day: string;
+    date: Date;
+    status: string;
+    method: string;
+    timestamp: Date;
+    teacherToken?: string;
+    mapel?: string;
+    guru?: string;
+    jam?: string;
+  }>;
 }
 
 export const StudentSchema = SchemaFactory.createForClass(Student);

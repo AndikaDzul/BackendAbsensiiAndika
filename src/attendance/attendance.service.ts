@@ -1,57 +1,58 @@
-import { Injectable, BadRequestException } from '@nestjs/common'
-import { InjectModel } from '@nestjs/mongoose'
-import { Model } from 'mongoose'
-import { Attendance, AttendanceDocument } from './schemas/attendance.schema'
+import { Injectable } from '@nestjs/common';
+import { StudentsService } from '../students/students.service';
+import { SchedulesService } from '../schedules/schedules.service';
 
 @Injectable()
 export class AttendanceService {
   constructor(
-    @InjectModel(Attendance.name)
-    private attendanceModel: Model<AttendanceDocument>,
+    private readonly studentsService: StudentsService,
+    private readonly schedulesService: SchedulesService
   ) {}
 
-  async scan(data: {
-    nis: string
-    name?: string
-    status?: string
-    time?: string
-  }): Promise<Attendance> {
-    if (!data.nis) {
-      throw new BadRequestException('NIS wajib')
+  async markAttendance(nis: string, qrToken: string) {
+    const student = await this.studentsService.findOne(nis);
+
+    const now = new Date();
+    const dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const today = dayNames[now.getDay()];
+
+    const schedules = await this.schedulesService.getScheduleForClass(student.class, today);
+
+    if (!schedules || schedules.length === 0) {
+      return this.studentsService.markAttendance(nis, {
+        day: today,
+        date: now,
+        status: 'Hadir',
+        method: 'QR',
+        timestamp: now,
+        teacherToken: qrToken
+      });
     }
 
-    // ⬇️ JIKA time dikirim → pakai
-    // ⬇️ JIKA tidak → pakai waktu sekarang
-    const date = data.time ? new Date(data.time) : new Date()
-
-    if (isNaN(date.getTime())) {
-      throw new BadRequestException('Format waktu tidak valid')
+    for (const s of schedules) {
+      const exist = student.attendanceHistory.find(
+        a => a.day === today && a.jam === s.jam && a.mapel === s.mapel
+      );
+      if (!exist) {
+        await this.studentsService.markAttendance(nis, {
+          day: today,
+          date: now,
+          status: 'Hadir',
+          method: 'QR',
+          timestamp: now,
+          teacherToken: qrToken,
+          mapel: s.mapel,
+          guru: s.guru,
+          jam: s.jam
+        });
+      }
     }
 
-    // 🔥 HARI OTOMATIS SESUAI TANGGAL
-    const day = date.toLocaleDateString('id-ID', {
-      weekday: 'long',
-    })
-
-    return this.attendanceModel.create({
-      nis: data.nis,
-      name: data.name || '',
-      status: data.status || 'Hadir',
-      time: date,
-      day,
-    })
+    student.status = 'Hadir';
+    return student.save();
   }
 
-  async findAll(): Promise<Attendance[]> {
-    return this.attendanceModel.find().sort({ time: -1 })
-  }
-
-  async reportByDay(day: string): Promise<Attendance[]> {
-    return this.attendanceModel.find({ day }).sort({ time: 1 })
-  }
-
-  async resetAll(): Promise<{ success: boolean }> {
-    await this.attendanceModel.deleteMany({})
-    return { success: true }
+  async resetAttendance() {
+    return this.studentsService.resetAllAttendance();
   }
 }

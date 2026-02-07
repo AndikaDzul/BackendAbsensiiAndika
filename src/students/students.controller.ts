@@ -1,5 +1,22 @@
-import { Controller, Get, Post, Patch, Body, Param, BadRequestException } from '@nestjs/common'
-import { StudentsService } from './students.service'
+import { Controller, Get, Post, Delete, Param, Body, NotFoundException } from '@nestjs/common';
+import { StudentsService } from './students.service';
+
+interface AttendanceDto {
+  day: string;
+  date: string | Date;
+  status: string;
+  method: string;
+  timestamp: string | Date;
+  teacherToken?: string;
+  mapel?: string;
+  guru?: string;  
+  jam?: string;
+}
+
+interface LoginDto {
+  email: string;
+  password: string;
+}
 
 @Controller('students')
 export class StudentsController {
@@ -7,48 +24,47 @@ export class StudentsController {
 
   @Get()
   findAll() {
-    return this.service.findAll()
+    return this.service.findAll();
+  }
+
+  // ================= REPORT ADMIN =================
+  @Get('report/:day')
+  getDailyReport(@Param('day') day: string) {
+    return this.service.getDailyReport(day);
   }
 
   @Post()
-  create(@Body() body) {
-    return this.service.create(body)
+  create(@Body() body: any) {
+    return this.service.create(body);
   }
 
+  @Delete(':nis')
+  remove(@Param('nis') nis: string) {
+    return this.service.remove(nis);
+  }
+
+  @Post('reset')
+  resetAllAttendance() {
+    return this.service.resetAllAttendance();
+  }
+
+  // ================= ABSEN SISWA =================
+ @Post('mark/:nis')
+async markAttendance(
+  @Param('nis') nis: string,
+  @Body() attendance: AttendanceDto
+) {
+  return this.service.markAttendance(nis, {
+    ...attendance,
+    date: new Date(attendance.date),
+    timestamp: new Date(attendance.timestamp),
+  });
+}
+
+
+  // ================= LOGIN SISWA =================
   @Post('login')
-  login(@Body() body) {
-    if (!body.email || !body.password)
-      throw new BadRequestException('Email & password wajib')
-    return this.service.login(body.email, body.password)
-  }
-
-  @Patch('attendance/:nis')
-  update(@Param('nis') nis: string, @Body() body) {
-    return this.service.updateStatus(nis, body.status, body.method)
-  }
-
-  @Post('scan')
-  scan(@Body() body) {
-    return this.service.updateStatus(body.nis, body.status || 'Hadir', 'qr')
-  }
-
-  @Get('history/:nis')
-  history(@Param('nis') nis: string) {
-    return this.service.getAttendance(nis)
-  }
-
-  @Patch('reset/:nis')
-  resetOne(@Param('nis') nis: string) {
-    return this.service.resetTodayAttendance(nis)
-  }
-
-  @Patch('reset-all')
-  async resetAll() {
-    return this.service.resetAllAttendance()
-  }
-
-  @Get('report/:day')
-  async report(@Param('day') day: string) {
-    return this.service.getDailyReport(day)
+  async login(@Body() body: LoginDto) {
+    return this.service.login(body.email, body.password);
   }
 }

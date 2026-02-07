@@ -3,22 +3,22 @@ import { Document } from 'mongoose';
 
 export type ScheduleDocument = Schedule & Document;
 
-@Schema({ timestamps: true })
-export class Schedule extends Document {
+@Schema()
+export class Schedule {
+  @Prop({ required: true })
+  hari: string; // Senin, Selasa, dll
+
+  @Prop({ required: true })
+  jam: string; // 07:00 - 09:00
+
+  @Prop({ required: true })
+  kelas: string; // RPL, AKL, dll
+
   @Prop({ required: true })
   mapel: string;
 
-  @Prop({ required: true })
+  @Prop()
   guru: string;
-
-  @Prop({ required: true })
-  hari: string;
-
-  @Prop({ required: true })
-  jam: string;
-
-  @Prop({ required: true })
-  kelas: string;
 }
 
 export const ScheduleSchema = SchemaFactory.createForClass(Schedule);

@@ -1,22 +1,24 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
-import { Document } from 'mongoose'
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
 
-@Schema({ timestamps: true })
-export class Teacher extends Document {
+export type TeacherDocument = Teacher & Document;
+
+@Schema()
+export class Teacher {
   @Prop({ required: true })
-  name: string
+  name: string;
 
   @Prop({ required: true, unique: true })
-  email: string
+  email: string;
 
   @Prop({ required: true })
-  password: string
+  mapel: string;
 
-  @Prop()
-  mapel: string
+  @Prop({ required: true })
+  password: string;
 
-  @Prop({ default: 'guru' })
-  role: string
+  @Prop({ default: 'teacher' }) // tambahkan role
+  role: string;
 }
 
-export const TeacherSchema = SchemaFactory.createForClass(Teacher)
+export const TeacherSchema = SchemaFactory.createForClass(Teacher);

@@ -1,16 +1,11 @@
-import { Module } from '@nestjs/common'
-import { MongooseModule } from '@nestjs/mongoose'
-import { AttendanceController } from './attendance.controller'
-import { AttendanceService } from './attendance.service'
-import { Attendance, AttendanceSchema } from './schemas/attendance.schema'
+import { Module } from '@nestjs/common';
+import { AttendanceService } from './attendance.service';
+import { StudentsModule } from '../students/students.module';
+import { SchedulesModule } from '../schedules/schedules.module';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([
-      { name: Attendance.name, schema: AttendanceSchema },
-    ]),
-  ],
-  controllers: [AttendanceController],
+  imports: [StudentsModule, SchedulesModule], // Harus import module yang menyediakan service
   providers: [AttendanceService],
+  exports: [AttendanceService],
 })
 export class AttendanceModule {}

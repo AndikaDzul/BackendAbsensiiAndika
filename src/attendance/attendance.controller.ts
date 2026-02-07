@@ -1,40 +1,22 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common'
-import { AttendanceService } from './attendance.service'
-import { Attendance } from './schemas/attendance.schema'
+import { Controller, Patch, Param, Body, Post } from '@nestjs/common';
+import { AttendanceService } from './attendance.service';
 
 @Controller('attendance')
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
-  // 📷 SCAN QR
-  @Post('scan')
-  async scan(
-    @Body()
-    body: {
-      nis: string
-      name?: string
-      status?: string
-      time?: string
-    },
-  ): Promise<Attendance> {
-    return this.attendanceService.scan(body)
+  // Endpoint scan QR siswa untuk absen
+  @Patch(':nis')
+  async scanAttendance(
+    @Param('nis') nis: string,
+    @Body('qrToken') qrToken: string,
+  ) {
+    return this.attendanceService.markAttendance(nis, qrToken);
   }
 
-  // 📜 SEMUA DATA
-  @Get()
-  async findAll(): Promise<Attendance[]> {
-    return this.attendanceService.findAll()
-  }
-
-  // 📊 LAPORAN PER HARI
-  @Get('report/:day')
-  async report(@Param('day') day: string): Promise<Attendance[]> {
-    return this.attendanceService.reportByDay(day)
-  }
-
-  // ♻️ RESET
+  // Reset semua absensi
   @Post('reset')
-  async reset(): Promise<{ success: boolean }> {
-    return this.attendanceService.resetAll()
+  async resetAttendance() {
+    return this.attendanceService.resetAttendance();
   }
 }

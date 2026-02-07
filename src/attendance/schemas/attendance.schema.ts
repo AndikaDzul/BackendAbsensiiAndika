@@ -1,24 +1,48 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { Document } from 'mongoose'
 
-export type AttendanceDocument = Attendance & Document
-
-@Schema({ timestamps: true })
-export class Attendance {
-  @Prop({ required: true })
-  nis: string
-
-  @Prop()
-  name: string
-
-  @Prop({ default: 'Hadir' })
-  status: string
-
-  @Prop({ type: Date, required: true })
-  time: Date
-
-  @Prop({ required: true })
+export interface AttendanceRecord {
   day: string
+  date: Date
+  status: string
+  method: string
+  timestamp: Date
+  teacherToken: string
+  mapel?: string
+  guru?: string
 }
 
-export const AttendanceSchema = SchemaFactory.createForClass(Attendance)
+@Schema({ timestamps: true })
+export class Student {
+  @Prop({ required: true, unique: true })
+  nis: string
+
+  @Prop({ required: true })
+  name: string
+
+  @Prop()
+  'class': string
+
+  @Prop({ default: '-' })
+  status: string
+
+  @Prop({
+    type: [
+      {
+        day: String,
+        date: Date,
+        status: String,
+        method: String,
+        timestamp: Date,
+        teacherToken: String,
+        mapel: String,
+        guru: String,
+      },
+    ],
+    default: [],
+  })
+  attendanceHistory: AttendanceRecord[]
+}
+
+export type StudentDocument = Student & Document
+export const StudentSchema = SchemaFactory.createForClass(Student)

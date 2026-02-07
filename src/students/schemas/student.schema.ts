@@ -3,28 +3,38 @@ import { Document } from 'mongoose';
 
 export type StudentDocument = Student & Document;
 
-@Schema({ timestamps: true })
+@Schema()
 export class Student {
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   nis: string;
 
   @Prop({ required: true })
   name: string;
 
-  @Prop()
+  @Prop({ required: true })
   class: string;
 
-  @Prop()
+  @Prop({ required: true, unique: true })
   email: string;
 
-  @Prop()
+  @Prop({ required: true })
   password: string;
 
-  @Prop({ default: '' })
+  @Prop({ default: '-' })
   status: string;
 
   @Prop({ type: Array, default: [] })
-  attendanceHistory: any[];
+  attendanceHistory: Array<{
+    day: string;
+    date: Date;
+    status: string;
+    method: string;
+    timestamp: Date;
+    teacherToken?: string;
+    mapel?: string;
+    guru?: string;
+    jam?: string;
+  }>;
 }
 
 export const StudentSchema = SchemaFactory.createForClass(Student);
