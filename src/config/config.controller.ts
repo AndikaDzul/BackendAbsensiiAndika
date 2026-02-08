@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body } from '@nestjs/common';
 import { ConfigService } from './config.service';
-import { Gps } from './schemas/gps.schema';
+import { Gps } from './schemas/gps.schemas';
 
 @Controller('config') // => /api/config
 export class ConfigController {

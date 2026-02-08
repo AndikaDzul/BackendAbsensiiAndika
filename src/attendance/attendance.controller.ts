@@ -1,22 +1,18 @@
-import { Controller, Patch, Param, Body, Post } from '@nestjs/common';
+import { Controller, Post, Param, Body } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
+import { CreateAttendanceDto } from '../students/dto/create-attendance.dto';
 
 @Controller('attendance')
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
-  // Endpoint scan QR siswa untuk absen
-  @Patch(':nis')
-  async scanAttendance(
-    @Param('nis') nis: string,
-    @Body('qrToken') qrToken: string,
-  ) {
-    return this.attendanceService.markAttendance(nis, qrToken);
+  @Post(':nis')
+  async mark(@Param('nis') nis: string, @Body() body: CreateAttendanceDto) {
+    return this.attendanceService.markAttendance(nis, body);
   }
 
-  // Reset semua absensi
   @Post('reset')
-  async resetAttendance() {
-    return this.attendanceService.resetAttendance();
+  async reset() {
+    return this.attendanceService.resetAllAttendance();
   }
 }

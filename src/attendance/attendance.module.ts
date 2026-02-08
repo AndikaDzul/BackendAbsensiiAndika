@@ -1,11 +1,12 @@
+// src/attendance/attendance.module.ts
 import { Module } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
-import { StudentsModule } from '../students/students.module';
-import { SchedulesModule } from '../schedules/schedules.module';
+import { AttendanceController } from './attendance.controller';
+import { StudentsModule } from '../students/students.module'; // ✅ Import module siswa
 
 @Module({
-  imports: [StudentsModule, SchedulesModule], // Harus import module yang menyediakan service
+  imports: [StudentsModule], // ✅ pastikan module siswa diimport
+  controllers: [AttendanceController],
   providers: [AttendanceService],
-  exports: [AttendanceService],
 })
 export class AttendanceModule {}

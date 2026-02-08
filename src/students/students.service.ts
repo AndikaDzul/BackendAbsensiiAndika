@@ -1,107 +1,114 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { Student, StudentDocument } from './students.schema';
-
-export interface AttendanceReport {
-  nis: string;
-  name: string;
-  class: string;
-  status: string;
-  mapel?: string;
-  guru?: string;
-  jam?: string;
-}
+import { Student, StudentDocument, AttendanceHistory } from './schemas/student.schema';
+import { CreateStudentDto } from './dto/create-students.dto';
+import { LoginStudentDto } from './dto/login-student.dto';
+import { CreateAttendanceDto } from './dto/create-attendance.dto';
 
 @Injectable()
 export class StudentsService {
-  constructor(@InjectModel(Student.name) private studentModel: Model<StudentDocument>) {}
+  constructor(
+    @InjectModel(Student.name)
+    private studentModel: Model<StudentDocument>,
+  ) {}
 
-  async findAll(): Promise<StudentDocument[]> {
-    return this.studentModel.find().exec();
+  async findAll(): Promise<Student[]> {
+    return this.studentModel.find().sort({ createdAt: -1 }).select('-password');
   }
 
-  async findOne(nis: string): Promise<StudentDocument> {
-    const student = await this.studentModel.findOne({ nis }).exec();
+  async createStudent(dto: CreateStudentDto): Promise<Student> {
+    if (!dto.nis || !dto.password)
+      throw new BadRequestException('NIS dan password wajib diisi');
+
+    const existing = await this.studentModel.findOne({ nis: dto.nis });
+    if (existing) throw new ConflictException('NIS sudah terdaftar');
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    const student = new this.studentModel({
+      nis: dto.nis,
+      password: hashedPassword,
+      name: dto.name,
+      class: dto.class || '',
+      email: dto.email || null,
+      status: '',
+      attendanceHistory: [],
+    });
+
+    return student.save();
+  }
+
+  async loginStudent(dto: LoginStudentDto) {
+    const student = await this.studentModel.findOne({ nis: dto.nis });
     if (!student) throw new NotFoundException('Siswa tidak ditemukan');
-    return student;
+
+    const match = await bcrypt.compare(dto.password, student.password);
+    if (!match) throw new UnauthorizedException('Password salah');
+
+    const { password, ...result } = student.toObject();
+    return {
+      message: 'Login berhasil',
+      student: result,
+    };
   }
 
-  async create(data: { nis: string; name: string; class: string; email: string; password: string }) {
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-    const student = new this.studentModel({ ...data, password: hashedPassword });
-    return student.save();
+  async deleteStudent(nis: string) {
+    const result = await this.studentModel.deleteOne({ nis });
+    if (result.deletedCount === 0)
+      throw new NotFoundException('Siswa tidak ditemukan');
+    return { ok: true };
   }
 
-  async remove(nis: string) {
-    return this.studentModel.findOneAndDelete({ nis }).exec();
-  }
+  async markAttendance(nis: string, dto: CreateAttendanceDto) {
+    const student = await this.studentModel.findOne({ nis });
+    if (!student) throw new NotFoundException('Siswa tidak ditemukan');
 
-  async login(email: string, password: string): Promise<StudentDocument> {
-    const student = await this.studentModel.findOne({ email });
-    if (!student) throw new NotFoundException('Email tidak ditemukan');
-    const match = await bcrypt.compare(password, student.password);
-    if (!match) throw new BadRequestException('Password salah');
-    return student;
-  }
+    const now = new Date();
+    
+    // PERBAIKAN: Gunakan type casting (dto as any) agar TS tidak komplain 
+    // jika qrToken tidak terbaca di DTO.
+    const inputData = dto as any;
 
-  // ================= ABSEN SISWA =================
-  async markAttendance(
-    nis: string,
-    attendance: {
-      day: string;
-      date: Date;
-      status: string;
-      method: string;
-      timestamp: Date;
-      teacherToken?: string;
-      mapel?: string;
-      guru?: string;
-      jam?: string;
-    }
-  ): Promise<StudentDocument> {
-    // Validasi QR guru
-    if (!attendance.teacherToken || !attendance.teacherToken.startsWith('ABSENSI-GURU-')) {
-      throw new BadRequestException('QR Code Guru Tidak Valid');
-    }
+    const attendance: any = {
+      day: now.toLocaleDateString('id-ID', { weekday: 'long' }),
+      date: now,
+      status: inputData.status,
+      method: inputData.method || 'system',
+      timestamp: now,
+      qrToken: inputData.qrToken || inputData.teacherToken, // Menampung qrToken dari frontend
+      teacherToken: inputData.teacherToken,
+      mapel: inputData.mapel,
+      guru: inputData.guru,
+      jam: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+    };
 
-    const student = await this.findOne(nis);
-    student.status = 'Hadir';
     student.attendanceHistory.push(attendance);
+    student.status = inputData.status;
+
     return student.save();
   }
 
-  async resetAllAttendance(): Promise<void> {
-    const students = await this.findAll();
-    for (const s of students) {
-      s.status = '-';
-      s.attendanceHistory = [];
-      await s.save();
-    }
+  async resetStudentAttendance(nis: string) {
+    const student = await this.studentModel.findOneAndUpdate(
+      { nis },
+      { status: '', attendanceHistory: [] },
+      { new: true },
+    );
+
+    if (!student) throw new NotFoundException('Siswa tidak ditemukan');
+    return { ok: true };
   }
 
-  async getDailyReport(day: string): Promise<AttendanceReport[]> {
-    const students = await this.findAll();
-    const report: AttendanceReport[] = [];
-    for (const s of students) {
-      const a = s.attendanceHistory.filter(at => at.day === day);
-      if (a.length === 0) {
-        report.push({ nis: s.nis, name: s.name, class: s.class, status: '-' });
-      } else {
-        for (const sc of a) {
-          report.push({
-            nis: s.nis,
-            name: s.name,
-            class: s.class,
-            status: sc.status,
-            mapel: sc.mapel || '',
-            guru: sc.guru || '',
-            jam: sc.jam || ''
-          });
-        }
-      }
-    }
-    return report;
+  async resetAllAttendanceByGuru() {
+    await this.studentModel.updateMany({}, { status: '', attendanceHistory: [] });
+    return { ok: true };
   }
 }

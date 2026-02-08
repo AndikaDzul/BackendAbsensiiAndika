@@ -3,15 +3,15 @@ import { Document } from 'mongoose';
 
 export type GpsDocument = Gps & Document;
 
-@Schema({ collection: 'gps' })
+@Schema()
 export class Gps {
   @Prop({ required: true })
-  lat: string;
+  lat: number;
 
   @Prop({ required: true })
-  lng: string;
+  lng: number;
 
-  @Prop({ required: true })
+  @Prop({ required: true, default: 50 })
   radius: number;
 }
 

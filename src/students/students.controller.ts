@@ -1,69 +1,47 @@
-import { Controller, Get, Post, Delete, Param, Body } from '@nestjs/common';
+// src/students/students.controller.ts
+import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
 import { StudentsService } from './students.service';
-
-interface AttendanceDto {
-  day: string;
-  date: string | Date;
-  status: string;
-  method: string;
-  timestamp: string | Date;
-  teacherToken?: string;
-  mapel?: string;
-  guru?: string;  
-  jam?: string;
-}
-
-interface LoginDto {
-  email: string;
-  password: string;
-}
+import { CreateStudentDto } from './dto/create-students.dto';
+import { LoginStudentDto } from './dto/login-student.dto';
+import { CreateAttendanceDto } from './dto/create-attendance.dto';
 
 @Controller('students')
 export class StudentsController {
-  constructor(private readonly service: StudentsService) {}
+  constructor(private readonly studentsService: StudentsService) {}
 
   @Get()
-  findAll() {
-    return this.service.findAll();
-  }
-
-  // ================= REPORT ADMIN =================
-  @Get('report/:day')
-  getDailyReport(@Param('day') day: string) {
-    return this.service.getDailyReport(day);
+  getAll() {
+    return this.studentsService.findAll();
   }
 
   @Post()
-  create(@Body() body: any) {
-    return this.service.create(body);
+  create(@Body() dto: CreateStudentDto) {
+    return this.studentsService.createStudent(dto);
+  }
+
+  @Post('login')
+  login(@Body() dto: LoginStudentDto) {
+    return this.studentsService.loginStudent(dto);
   }
 
   @Delete(':nis')
-  remove(@Param('nis') nis: string) {
-    return this.service.remove(nis);
+  delete(@Param('nis') nis: string) {
+    return this.studentsService.deleteStudent(nis);
+  }
+
+  // Endpoint yang digunakan Postman/Vue: POST /api/students/attendance/:nis
+  @Post('attendance/:nis')
+  markAttendance(@Param('nis') nis: string, @Body() body: CreateAttendanceDto) {
+    return this.studentsService.markAttendance(nis, body);
+  }
+
+  @Post('reset/:nis')
+  resetOne(@Param('nis') nis: string) {
+    return this.studentsService.resetStudentAttendance(nis);
   }
 
   @Post('reset')
-  resetAllAttendance() {
-    return this.service.resetAllAttendance();
-  }
-
-  // ================= ABSEN SISWA =================
-  @Post('mark/:nis')
-  async markAttendance(
-    @Param('nis') nis: string,
-    @Body() attendance: AttendanceDto
-  ) {
-    return this.service.markAttendance(nis, {
-      ...attendance,
-      date: new Date(attendance.date),
-      timestamp: new Date(attendance.timestamp),
-    });
-  }
-
-  // ================= LOGIN SISWA =================
-  @Post('login')
-  async login(@Body() body: LoginDto) {
-    return this.service.login(body.email, body.password);
+  resetAttendance() {
+    return this.studentsService.resetAllAttendanceByGuru();
   }
 }

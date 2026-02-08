@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigService } from './config.service';
 import { ConfigController } from './config.controller';
-import { Gps, GpsSchema } from './schemas/gps.schema';
+import { Gps, GpsSchema } from './schemas/gps.schemas';
 
 @Module({
   imports: [

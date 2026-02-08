@@ -7,11 +7,11 @@ export class CreateAttendanceDto {
 
   @IsString()
   @IsOptional()
-  qrToken?: string;
+  qrToken?: string; // WAJIB ADA AGAR POSTMAN TIDAK ERROR 400
 
   @IsString()
   @IsOptional()
-  timestamp?: string;
+  timestamp?: string; // WAJIB ADA AGAR POSTMAN TIDAK ERROR 400
 
   @IsString()
   @IsOptional()
