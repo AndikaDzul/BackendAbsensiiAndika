@@ -1,79 +1,24 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
-import { Document } from 'mongoose'
-import * as bcrypt from 'bcrypt'
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
 
-export type StudentDocument = Student & Document
-
-export interface AttendanceHistory {
-  day: string
-  date: Date
-  status: string
-  method: string
-  timestamp: Date
-  teacherToken?: string
-  mapel?: string
-  guru?: string
-  jam?: string
-}
+export type StudentDocument = Student & Document;
 
 @Schema({ timestamps: true })
 export class Student {
-
-  @Prop({ required: true })
-  name: string
-
   @Prop({ required: true, unique: true })
-  nis: string
+  nis: string;
 
-  @Prop({ default: '' })
-  class: string
+  @Prop()
+  name: string;
 
-  // 🔴 FIX PENTING DI SINI
-  @Prop({
-    required: false,
-    unique: true,
-    sparse: true, // ⬅️ INI WAJIB
-    default: null,
-  })
-  email?: string
+  @Prop()
+  class: string;
 
-  @Prop({ required: true })
-  password: string
+  @Prop({ default: 'Belum Absen' })
+  status: string;
 
-  @Prop({ default: '' })
-  status: string
-
-  @Prop({
-    type: [
-      {
-        day: String,
-        date: Date,
-        status: String,
-        method: String,
-        timestamp: Date,
-        teacherToken: String,
-        mapel: String,
-        guru: String,
-        jam: String,
-      },
-    ],
-    default: [],
-  })
-  attendanceHistory: AttendanceHistory[]
+  @Prop({ type: [{ status: String, timestamp: Date }] })
+  attendanceHistory: { status: string; timestamp: Date }[];
 }
 
-export const StudentSchema = SchemaFactory.createForClass(Student)
-
-// ✅ PRE SAVE AMAN (TIDAK ADA next ERROR)
-StudentSchema.pre<StudentDocument>('save', async function () {
-  if (this.isModified('password')) {
-    const salt = await bcrypt.genSalt(10)
-    this.password = await bcrypt.hash(this.password, salt)
-  }
-
-  // email OPTIONAL → biarkan undefined (AMAN DENGAN sparse: true)
-  if (!this.email) {
-    this.email = undefined
-  }
-})
-
+export const StudentSchema = SchemaFactory.createForClass(Student);

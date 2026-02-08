@@ -1,31 +1,13 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class CreateAttendanceDto {
   @IsString()
-  @IsNotEmpty()
-  status: string;
+  qrToken: string;
 
   @IsString()
   @IsOptional()
-  qrToken?: string;
+  status?: string;
 
-  @IsString()
   @IsOptional()
-  timestamp?: string;
-
-  @IsString()
-  @IsOptional()
-  method?: string;
-
-  @IsString()
-  @IsOptional()
-  teacherToken?: string;
-
-  @IsString()
-  @IsOptional()
-  mapel?: string;
-
-  @IsString()
-  @IsOptional()
-  guru?: string;
+  timestamp?: string; // 🔹 timestamp opsional
 }
