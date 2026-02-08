@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 
@@ -22,5 +22,14 @@ export class StudentsController {
     @Body() body: CreateAttendanceDto,
   ) {
     return this.studentsService.createAttendance(nis, body);
+  }
+
+  // ================= LOGIN SISWA =================
+  @Post('login')
+  async login(@Body() body: { nis: string; password: string }) {
+    const { nis, password } = body;
+    const student = await this.studentsService.login(nis, password);
+    if (!student) return { success: false, message: 'NIS atau password salah' };
+    return { success: true, student };
   }
 }

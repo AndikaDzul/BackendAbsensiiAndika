@@ -1,13 +1,11 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsOptional, IsString, IsDateString } from 'class-validator';
 
 export class CreateAttendanceDto {
-  @IsString()
-  qrToken: string;
-
-  @IsString()
   @IsOptional()
-  status?: string;
+  @IsString()
+  status?: string; // Hadir / Sakit / Izin / dll
 
   @IsOptional()
-  timestamp?: string; // 🔹 timestamp opsional
+  @IsDateString()
+  timestamp?: string; // ISO date
 }
